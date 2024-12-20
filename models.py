@@ -1,4 +1,4 @@
-from sqlalchemy import Column,Integer,String,Float,Date
+from sqlalchemy import Column,Integer,String,Float,Date,Boolean
 from db import Base,engine
 import datetime
 
@@ -8,7 +8,7 @@ class User(Base):
     username = Column(String,unique=True)
     password = Column(String)
     role = Column(String)
-    is_deleted = False
+    is_deleted = Column(Boolean)
     
 class Student(Base):
     __tablename__="students"
@@ -17,14 +17,14 @@ class Student(Base):
     surname = Column(String)
     fin = Column(String)
     date = Column(Date)
-    is_deleted = False
+    is_deleted = Column(Boolean)
 
 class Course(Base):
     __tablename__="courses"
     id = Column(Integer,primary_key=True)
     subject = Column(String)
     description = Column(String)
-    is_deleted = False
+    is_deleted = Column(Boolean)
     
 class Registration(Base):
     __tablename__="students course registration"
@@ -32,6 +32,6 @@ class Registration(Base):
     course_name = Column(String)
     student_name = Column(String)
     final_note = Column(Float)
-    is_deleted = False
+    is_deleted = Column(Boolean)
     
 Base.metadata.create_all(bind=engine)

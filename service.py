@@ -1,11 +1,10 @@
 from fastapi import Depends,HTTPException
-from models import User
+from models import User,Student
 from schema import *
 from sqlalchemy.orm import Session
 from exceptions import UserNotFoundException
 import bcrypt
 from jwt import get_current_user
-from login import read_users_me
 
 
 def hash_password(password: str) -> str:
@@ -42,3 +41,19 @@ def delete_user_from_db(data:DeleteUserSchema,db:Session,current_user=Depends(ge
     db.refresh(user_in_db)
     message = f"{user_in_db.username} lecturer is deleted successfully"
     return message
+
+def get_list_students(db:Session, current_user=Depends(get_current_user)):
+    current_user_in_db = db.query(User).filter(User.username==current_user['username']).first()
+    if current_user_in_db.role != "admin":
+        raise HTTPException(status_code=401,detail="permission denied")
+    students_list = []
+    students = db.query(Student)
+    for student in students:
+        if student.is_deleted != False:
+            pass
+        student_dict = {
+            "student_name":student.username,
+            "student_surname":student.surname
+            }
+        students_list.append(student_dict)
+    return students_list

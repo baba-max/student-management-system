@@ -12,3 +12,4 @@ class DeleteUserSchema(BaseModel):
     username: str
     class Config:
         extra = "forbid"
+        

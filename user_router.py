@@ -14,7 +14,7 @@ def get_current_user(db=Depends(get_db), current_user=Depends(get_current_user))
 
 @user_router.post("/user")
 def create_user(item:CreateNewUser,db=Depends(get_db)):
-    result = create_new_user(item=item,db=db)
+    result = create_new_user(data=item,db=db)
     return result
 
 @user_router.delete("/user")

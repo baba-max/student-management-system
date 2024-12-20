@@ -7,25 +7,29 @@ import bcrypt
 from jwt import get_current_user
 
 
-def hash_password(password: str) -> str:
-    salt = bcrypt.gensalt()
-    hashed_password = bcrypt.hashpw(password.encode('utf-8'), salt)
-    return hashed_password.decode('utf-8')
-
 def get_user(db:Session, current_user=Depends(get_current_user)):
     return current_user
 
-def create_new_user(item:CreateNewUser,db:Session):
-    new_user = User(username=item.username, password=hash_password(item.password),role=item.role,is_deleted=False)
-    if new_user.role!="admin" and new_user.role!="lecturer":
-        message = "You can create only lecturer or admin user"
-        return message
-        
+def create_new_user(data:CreateNewUser,db:Session):
+    hashed_password=bcrypt.hashpw(data.password.encode("utf-8"),bcrypt.gensalt())
+    new_user=User(username=data.username,password=hashed_password.decode("utf-8"),role = data.role,is_deleted = False)
+    if data.role != "admin" and data.role != "lecturer":
+        raise HTTPException #yalniz admin ve mellim rollu istifadeci yaratmaq olar
+    user=db.query(User).filter(User.username == new_user.username, User.is_deleted == False).first()
+    if user:
+        raise HTTPException #istifadeci movcuddur
+    user1=db.query(User).filter(User.username == new_user.username, User.is_deleted == True).first()
+    if user1:
+        user1.username = data.username
+        user1.password = hashed_password.decode("utf-8")
+        user1.role = data.role
+        user1.is_deleted = False
+        db.commit()
+        return {"msg":"new user is created"}
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
-    message = f"New {new_user.role} is created successfully"
-    return message
+    return {"msg":"new user is created"}
         
 def delete_user_from_db(data:DeleteUserSchema,db:Session,current_user=Depends(get_current_user)):
     current_user_in_db = db.query(User).filter(User.username==current_user['username']).first()

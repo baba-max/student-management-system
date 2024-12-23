@@ -15,13 +15,14 @@ class Student(Base):
     id = Column(Integer,primary_key=True)
     username = Column(String)
     surname = Column(String)
-    fin = Column(String)
+    fin = Column(String,unique=True)
     date = Column(Date)
     is_deleted = Column(Boolean)
 
 class Course(Base):
     __tablename__="courses"
     id = Column(Integer,primary_key=True)
+    teacher_id = Column(Integer)
     subject = Column(String)
     description = Column(String)
     is_deleted = Column(Boolean)

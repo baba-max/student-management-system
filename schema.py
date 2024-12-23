@@ -13,3 +13,17 @@ class DeleteUserSchema(BaseModel):
     class Config:
         extra = "forbid"
         
+class CreateStudentSchema(BaseModel):
+    username: str
+    surname: str
+    fin: str
+    date: date
+    class Config:
+        extra = "forbid"
+        
+class CreateCourseSchema(BaseModel):
+    teacher_id: int
+    subject: str
+    description: str
+    class Config:
+        extra = "forbid"

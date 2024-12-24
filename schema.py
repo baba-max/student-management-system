@@ -27,3 +27,13 @@ class CreateCourseSchema(BaseModel):
     description: str
     class Config:
         extra = "forbid"
+        
+class DeleteStudentSchema(BaseModel):
+    fin: str
+    class Config:
+        extra = "forbid"
+        
+class GetCourseINfoFORLecturers(BaseModel):
+    teacher_id: int
+    class Config:
+        extra = "forbid"

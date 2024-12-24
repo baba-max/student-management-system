@@ -16,3 +16,8 @@ def get_list_of_all_courses(db=Depends(get_db), current_user=Depends(get_current
 def create_new_course(item:CreateCourseSchema,db=Depends(get_db),current_user=Depends(get_current_user)):
     message = create_course(data=item,db=db,current_user=current_user)
     return message
+
+@course_router.get("/course_info_for_lecturers/course_id")
+def get_course_info_for_lecturers(item:GetCourseINfoFORLecturers,db=Depends(get_db),current_user=Depends(get_current_user)):
+    message = course_info_for_lecturers(data=item,db=db,current_user=current_user)
+    return {"list of all active subjects for lecturer":message}

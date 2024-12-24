@@ -21,3 +21,8 @@ def create_new_student(item: CreateStudentSchema, db=Depends(get_db),current_use
 def get_student_data(id:int,db=Depends(get_db),current_user=Depends(get_current_user)):
     result = get_student_by_id(id=id,db=db,current_user=current_user)
     return {"msg":result}
+
+@student_router.delete("/student/ID")
+def delete_student_from_base(item: DeleteStudentSchema, db=Depends(get_db),current_user=Depends(get_current_user)):
+    result = delete_user(data=item,db=db,current_user=current_user)
+    return result

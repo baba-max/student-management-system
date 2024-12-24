@@ -158,7 +158,7 @@ def create_course(data:CreateCourseSchema,db:Session,current_user=Depends(get_cu
         raise LecturerNotFoundException #muellim yoxdur
     
     new_course = Course(teacher_id=data.teacher_id,subject=data.subject,description=data.description,is_deleted=False)
-    course = db.query(Course).filter(Course.is_deleted==False).first()
+    course = db.query(Course).filter(Course.teacher_id==data.teacher_id,Course.subject==data.subject,Course.is_deleted==False).first()
     if course:
         raise CourseAlreadyExist #kurs movcuddur
     deleted_course = db.query(Course).filter(Course.is_deleted==True).first()
@@ -180,6 +180,8 @@ def course_info_for_lecturers(data:GetCourseINfoFORLecturers,db:Session,current_
     if current_user_in_db.role != "lecturer":
         raise HTTPException(status_code=401,detail="permission denied")
     subjects = db.query(Course).filter(Course.teacher_id == data.teacher_id)
+    if not subjects:
+        raise SubjectNotFoundException 
     list_of_all_subjects =[]
     for subject in subjects:
         if subject.is_deleted != False:

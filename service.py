@@ -2,7 +2,7 @@ from fastapi import Depends,HTTPException
 from models import User,Student,Registration,Course
 from schema import *
 from sqlalchemy.orm import Session
-from exceptions import UserNotFoundException
+from exceptions import *
 import bcrypt
 from jwt import get_current_user
 
@@ -15,10 +15,10 @@ def create_new_user(data:CreateNewUser,db:Session):
     hashed_password=bcrypt.hashpw(data.password.encode("utf-8"),bcrypt.gensalt())
     new_user=User(username=data.username,password=hashed_password.decode("utf-8"),role = data.role,is_deleted = False)
     if data.role != "admin" and data.role != "lecturer":
-        raise HTTPException #yalniz admin ve mellim rollu istifadeci yaratmaq olar
+        raise InvalidRole #yalniz admin ve mellim rollu istifadeci yaratmaq olar
     user=db.query(User).filter(User.username == new_user.username, User.is_deleted == False).first()
     if user:
-        raise HTTPException #istifadeci mov
+        raise UserAlreadyExist #istifadeci mov
     user1=db.query(User).filter(User.username == new_user.username, User.is_deleted == True).first()
     if user1:
         user1.username = data.username
@@ -39,9 +39,9 @@ def delete_user_from_db(data:DeleteUserSchema,db:Session,current_user=Depends(ge
         raise HTTPException(status_code=401,detail="permission denied")
     user_in_db = db.query(User).filter(User.username==data.username).first()
     if user_in_db.role != "lecturer":
-        raise HTTPException #yalniz muellimleri silmek olar
+        raise HTTPException(status_code=401,detail="you can remove only lecturers") #yalniz muellimleri silmek olar
     if user_in_db.is_deleted == True:
-        raise HTTPException #artiq silinib
+        raise UserNotFoundException #artiq silinib
     user_in_db.is_deleted = True
     db.commit()
     db.refresh(user_in_db)
@@ -73,7 +73,7 @@ def create_student(data:CreateStudentSchema, db:Session, current_user=Depends(ge
     new_student=Student(username=data.username,surname=data.surname,fin = data.fin,date=data.date,is_deleted = False)
     student=db.query(Student).filter(Student.fin == new_student.fin, Student.is_deleted == False).first()
     if student:
-        raise HTTPException #student movcuddur
+        raise StudentAlreadyExist #student movcuddur
     student1=db.query(Student).filter(Student.fin == new_student.fin, Student.is_deleted == True).first()
     if student1:
         student1.username = data.username
@@ -95,7 +95,7 @@ def get_student_by_id(id:int, db:Session, current_user=Depends(get_current_user)
             raise HTTPException(status_code=401,detail="This function is only for admins")
     student = db.query(Student).filter(Student.id == id, Student.is_deleted == False).first()
     if not student:
-        raise HTTPException #student tapilmir
+        raise StudentNotFoundException #student tapilmir
     register_course = db.query(Registration).filter(Registration.student_name == student.username, Registration.is_deleted == False).all()
     if not register_course:
         result1 = "His student has not registered for any course"
@@ -114,6 +114,22 @@ def get_student_by_id(id:int, db:Session, current_user=Depends(get_current_user)
         return {"name":name,"surname":student.surname,"birthdate":student.date,"course_name":end}
     
     
+def delete_user(data: DeleteStudentSchema, db: Session,current_user=Depends(get_current_user)):
+    user = db.query(User).filter(User.username == current_user["username"], User.is_deleted == False).first()
+    if current_user["username"] == user.username:
+        if user.role  == "lecturer":
+            raise HTTPException(status_code=401,detail="This function is only for admins")
+    student_in_db = db.query(Student).filter(Student.fin==data.fin).first()
+    if student_in_db.is_deleted == True:
+        raise StudentNotFoundException #artiq silinib
+    student_in_db.is_deleted = True
+    db.commit()
+    db.refresh(student_in_db)
+    message = f"{student_in_db.username} student is deleted successfully"
+    return message
+
+    
+    
     
 #course router
 
@@ -125,7 +141,7 @@ def get_list_courses(db:Session, current_user=Depends(get_current_user)):
     courses = db.query(Course)
     for course in courses:
         if course.is_deleted != False:
-            pass
+            raise CourseNotFoundException
         course_dict = {
             "subject_name":course.subject,
             }
@@ -139,12 +155,12 @@ def create_course(data:CreateCourseSchema,db:Session,current_user=Depends(get_cu
         raise HTTPException(status_code=401,detail="permission denied")
     teacher = db.query(User).filter(User.id == data.teacher_id, User.role == "lecturer", User.is_deleted == False).first()
     if not teacher:
-        raise HTTPException #muellim yoxdur
+        raise LecturerNotFoundException #muellim yoxdur
     
     new_course = Course(teacher_id=data.teacher_id,subject=data.subject,description=data.description,is_deleted=False)
     course = db.query(Course).filter(Course.is_deleted==False).first()
     if course:
-        raise HTTPException #kurs movcuddur
+        raise CourseAlreadyExist #kurs movcuddur
     deleted_course = db.query(Course).filter(Course.is_deleted==True).first()
     if deleted_course:
         deleted_course.teacher_id = data.teacher_id
@@ -158,3 +174,44 @@ def create_course(data:CreateCourseSchema,db:Session,current_user=Depends(get_cu
     db.refresh(new_course)  
     return {"msg": "new course is created successfully"}
 
+
+def course_info_for_lecturers(data:GetCourseINfoFORLecturers,db:Session,current_user=Depends(get_current_user)):
+    current_user_in_db = db.query(User).filter(User.username==current_user['username']).first()
+    if current_user_in_db.role != "lecturer":
+        raise HTTPException(status_code=401,detail="permission denied")
+    subjects = db.query(Course).filter(Course.teacher_id == data.teacher_id)
+    list_of_all_subjects =[]
+    for subject in subjects:
+        if subject.is_deleted != False:
+            SubjectNotFoundException
+        course_dict = {
+            "subject_name":subject.subject,
+            }
+        list_of_all_subjects.append(course_dict)
+    return list_of_all_subjects
+
+
+
+#Registration router
+
+def get_grade_by_id_from_db(student_id: int, db: Session, current_user: User = Depends(get_current_user)):
+    current_user_in_db = db.query(User).filter(User.username==current_user['username']).first()
+    if current_user_in_db.role != "admin":
+        raise HTTPException(status_code=401,detail="permission denied")
+    student = db.query(Student).filter(Student.id == student_id, Student.is_deleted == False)
+    if not student:
+            raise StudentNotFoundException()
+    list_of_courses = []
+    for i in student:
+        courses = db.query(Registration).filter(Registration.student_name == i.username).first()
+        dict = {
+            "student name":courses.student_name,
+            "course name":courses.course_name,
+            "final point":courses.final_note
+        }
+        list_of_courses.append(dict)
+    if not list_of_courses:
+        return {"Message": "Student has not enrolled in any courses."}
+    return list_of_courses
+
+    
